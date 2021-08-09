@@ -6,43 +6,91 @@ public class MapCreator : MonoBehaviour
 {
     Tilemap map;
     List<Chunk> chunks;
+    FastNoiseLite noise;
 
-    public Tile water;
-    public Tile lightGrass;
-    public Tile grass;
-    public Tile sand;
+    public List<Chunk> Chunks => chunks;
+    [SerializeField] int tileSize;
+    public int TileSize => tileSize;
 
-    // Start is called before the first frame update
+    [SerializeField] Tile water;
+    [SerializeField] Tile lightGrass;
+    [SerializeField] Tile grass;
+    [SerializeField] Tile sand;
+
+    [SerializeField] float renderDelay;
+    float timer;
+
     void Start()
     {
         this.map = gameObject.GetComponent<Tilemap>();
-        DrawChunk(CreateChunk(new Vector3Int(0, 0, 0), new Vector3Int(100, 100, 0)));
-        DrawChunk(CreateChunk(new Vector3Int(0, 100, 0), new Vector3Int(100, 200, 0)));
-        /* DrawChunk(new Vector3Int(100, 100, 0), new Vector3Int(200, 200, 0)); */
-        /* DrawChunk(new Vector3Int(-100, -100, 0), new Vector3Int(0, 0, 0)); */
+        this.chunks = new List<Chunk>();
+        this.noise = CreateNoise();
     }
 
-    // Update is called once per frame
     void Update()
     {
+        timer += Time.deltaTime;
 
+        if (timer > renderDelay)
+        {
+            timer = 0f;
+            DrawChunks();
+        }
     }
 
-    public Chunk CreateChunk(Vector3Int start, Vector3Int end)
+    FastNoiseLite CreateNoise()
+    {
+        var noise = new FastNoiseLite();
+        noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        return noise;
+    }
+
+    void DrawChunks()
+    {
+        foreach (Chunk chunk in this.chunks)
+        {
+            Debug.Log(chunk.drawed);
+            if (!chunk.drawed)
+                DrawChunk(chunk);
+        }
+    }
+
+    public void CreateChunk(Vector3Int start, Vector3Int end)
     {
         var tiles = new Dictionary<Vector3Int, GameTile>();
 
         for (int i = start.x; i < end.x; i++)
             for (int j = start.y; j < end.y; j++)
             {
-                float perlin = Mathf.PerlinNoise(i * 3.001f, j * 3.001f);
-                Tile tile = perlin < 0.5 ? water : grass;
-                /* this.map.SetTile(new Vector3Int(i, j, 0), perlin < 0.5 ? water : grass); */
+                float perlin = this.noise.GetNoise(i, j);
+                Tile tile;
+
+                if (perlin > 0.6)
+                {
+                    tile = grass;
+                }
+                else if (perlin > 0.2)
+                {
+                    tile = lightGrass;
+                }
+                else if (perlin > -0.5)
+                {
+                    tile = sand;
+                }
+                else
+                {
+                    tile = water;
+                }
                 Vector3Int pos = new Vector3Int(i, j, 0);
                 tiles[pos] = new GameTile(tile, pos);
             }
 
-        return new Chunk(new BoundsInt(), tiles);
+        for (int i = 0; i < this.chunks.Count; i++)
+        {
+            DeleteChunk(this.chunks[i]);
+        }
+
+        this.chunks.Add(new Chunk(new BoundsInt(start, end), tiles, false));
     }
 
     public void DrawChunk(Chunk chunk)
@@ -51,6 +99,7 @@ public class MapCreator : MonoBehaviour
         {
             this.map.SetTile(tile.pos, tile.tile);
         }
+        chunk.drawed = true;
     }
 
     public void DeleteChunk(Chunk chunk)
@@ -59,7 +108,13 @@ public class MapCreator : MonoBehaviour
         {
             DeleteTile(tile);
         }
-        chunks.Remove(chunk);
+
+        this.chunks.Remove(chunk);
+    }
+
+    public bool InsideChunk(Chunk chunk, Vector3Int position)
+    {
+        return chunk.bounds.Contains(position);
     }
 
     void DeleteTile(GameTile tile)
@@ -68,19 +123,21 @@ public class MapCreator : MonoBehaviour
     }
 }
 
-public struct Chunk
+public class Chunk
 {
     public BoundsInt bounds;
     public Dictionary<Vector3Int, GameTile> tiles;
+    public bool drawed;
 
-    public Chunk(BoundsInt bounds, Dictionary<Vector3Int, GameTile> tiles)
+    public Chunk(BoundsInt bounds, Dictionary<Vector3Int, GameTile> tiles, bool drawed)
     {
         this.bounds = bounds;
         this.tiles = tiles;
+        this.drawed = drawed;
     }
 }
 
-public struct GameTile
+public class GameTile
 {
     public Tile tile;
     public Vector3Int pos;
