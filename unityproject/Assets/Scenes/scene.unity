@@ -164,6 +164,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveSpeed: 10
   scrollSpeed: 10
+  renderRadius: 10
+  renderRectangle: 0
+  chunksLookup: 15
 --- !u!20 &519420031
 Camera:
   m_ObjectHideFlags: 0
@@ -353,10 +356,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cec14ccca1c532e3bf5aee1e94967ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  tileSize: 25
   water: {fileID: 11400000, guid: 4fea919b9e6af28ed8e9cefca0e996c2, type: 2}
   lightGrass: {fileID: 11400000, guid: 7a0e7ca0c6a37c0818ad28a22037c8f4, type: 2}
   grass: {fileID: 11400000, guid: 6bea62acafbd2f0d9870173eef7fc5de, type: 2}
   sand: {fileID: 11400000, guid: 89198e93a9801e5eebcec05ab3034728, type: 2}
+  renderDelay: 0
 --- !u!1 &1722386828
 GameObject:
   m_ObjectHideFlags: 0

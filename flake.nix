@@ -14,7 +14,7 @@
         in
           rec {
             devShell = pkgs.mkShell {
-              buildInputs = with pkgs; [ aseprite-unfree unityhub ];
+              buildInputs = with pkgs; [ pythonFull aseprite-unfree unityhub ];
             };
           }
     );

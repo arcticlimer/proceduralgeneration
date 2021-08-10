@@ -5,10 +5,10 @@ using UnityEngine.Tilemaps;
 public class MapCreator : MonoBehaviour
 {
     Tilemap map;
-    List<Chunk> chunks;
+    Dictionary<(Vector2Int, Vector2Int), Chunk> chunks;
     FastNoiseLite noise;
 
-    public List<Chunk> Chunks => chunks;
+    public Dictionary<(Vector2Int, Vector2Int), Chunk> Chunks => chunks;
     [SerializeField] int tileSize;
     public int TileSize => tileSize;
 
@@ -23,7 +23,7 @@ public class MapCreator : MonoBehaviour
     void Start()
     {
         this.map = gameObject.GetComponent<Tilemap>();
-        this.chunks = new List<Chunk>();
+        this.chunks = new Dictionary<(Vector2Int, Vector2Int), Chunk>();
         this.noise = CreateNoise();
     }
 
@@ -47,16 +47,20 @@ public class MapCreator : MonoBehaviour
 
     void DrawChunks()
     {
-        foreach (Chunk chunk in this.chunks)
+        foreach (Chunk chunk in this.chunks.Values)
         {
-            Debug.Log(chunk.drawed);
             if (!chunk.drawed)
                 DrawChunk(chunk);
         }
     }
 
-    public void CreateChunk(Vector3Int start, Vector3Int end)
+    public void CreateChunk(Vector2Int start, Vector2Int end)
     {
+        if (this.chunks.ContainsKey((start, end)))
+        {
+            return;
+        }
+
         var tiles = new Dictionary<Vector3Int, GameTile>();
 
         for (int i = start.x; i < end.x; i++)
@@ -81,16 +85,13 @@ public class MapCreator : MonoBehaviour
                 {
                     tile = water;
                 }
+
                 Vector3Int pos = new Vector3Int(i, j, 0);
                 tiles[pos] = new GameTile(tile, pos);
             }
 
-        for (int i = 0; i < this.chunks.Count; i++)
-        {
-            DeleteChunk(this.chunks[i]);
-        }
-
-        this.chunks.Add(new Chunk(new BoundsInt(start, end), tiles, false));
+        Chunk chunk = new Chunk(start, end, tiles, false);
+        this.chunks.Add((start, end), chunk);
     }
 
     public void DrawChunk(Chunk chunk)
@@ -109,12 +110,7 @@ public class MapCreator : MonoBehaviour
             DeleteTile(tile);
         }
 
-        this.chunks.Remove(chunk);
-    }
-
-    public bool InsideChunk(Chunk chunk, Vector3Int position)
-    {
-        return chunk.bounds.Contains(position);
+        this.chunks.Remove((chunk.start, chunk.end));
     }
 
     void DeleteTile(GameTile tile)
@@ -125,13 +121,15 @@ public class MapCreator : MonoBehaviour
 
 public class Chunk
 {
-    public BoundsInt bounds;
+    /* public BoundsInt bounds; */
+    public Vector2Int start;
+    public Vector2Int end;
     public Dictionary<Vector3Int, GameTile> tiles;
     public bool drawed;
 
-    public Chunk(BoundsInt bounds, Dictionary<Vector3Int, GameTile> tiles, bool drawed)
+    public Chunk(Vector2Int start, Vector2Int end,
+                 Dictionary<Vector3Int, GameTile> tiles, bool drawed)
     {
-        this.bounds = bounds;
         this.tiles = tiles;
         this.drawed = drawed;
     }
