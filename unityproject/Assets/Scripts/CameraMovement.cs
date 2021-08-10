@@ -2,19 +2,19 @@ using UnityEngine;
 
 public class CameraMovement : MonoBehaviour
 {
-    MapCreator mapCreator;
+    MapManager mapManager;
     Transform myTransform;
     Camera myCamera;
 
-    [SerializeField] float moveSpeed;
     [SerializeField] float scrollSpeed;
-    [SerializeField] int renderRectangle;
+    public float renderDistance {get; set;} = 2;
+    public float moveSpeed { get; set; } = 5;
 
     void Start()
     {
         this.myCamera = gameObject.GetComponent<Camera>();
         this.myTransform = gameObject.GetComponent<Transform>();
-        this.mapCreator = GameObject.Find("World Tilemap").GetComponent<MapCreator>();
+        this.mapManager = GameObject.Find("World Tilemap").GetComponent<MapManager>();
     }
 
     void Update()
@@ -27,8 +27,8 @@ public class CameraMovement : MonoBehaviour
     void DrawChunks()
     {
         var pos = new Vector2(myTransform.position.x, myTransform.position.y);
-        int tileSize = this.mapCreator.TileSize;
-        int offset = this.renderRectangle * tileSize;
+        int tileSize = (int)this.mapManager.tileSize;
+        int offset = (int)this.renderDistance * tileSize;
 
         // TODO: Destroy unrendered chunks
         for (float y = pos.y - offset; y < pos.y + offset; y += tileSize)
@@ -37,8 +37,7 @@ public class CameraMovement : MonoBehaviour
             {
                 Vector2 vec = new Vector2(x, y);
                 var (start, end) = PositionToQuadrant(vec, tileSize);
-                /* Debug.Log((vec, (start, end))); */
-                this.mapCreator.CreateChunk(start, end);
+                this.mapManager.CreateChunk(start, end);
             }
         }
     }

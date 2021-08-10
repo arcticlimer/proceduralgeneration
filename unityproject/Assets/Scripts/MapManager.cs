@@ -2,40 +2,31 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class MapCreator : MonoBehaviour
+public class MapManager : MonoBehaviour
 {
     Tilemap map;
     Dictionary<(Vector2Int, Vector2Int), Chunk> chunks;
     FastNoiseLite noise;
 
     public Dictionary<(Vector2Int, Vector2Int), Chunk> Chunks => chunks;
-    [SerializeField] int tileSize;
-    public int TileSize => tileSize;
+    public float tileSize { get; set; } = 25;
 
     [SerializeField] Tile water;
     [SerializeField] Tile lightGrass;
     [SerializeField] Tile grass;
     [SerializeField] Tile sand;
 
-    [SerializeField] float renderDelay;
-    float timer;
-
     void Start()
     {
         this.map = gameObject.GetComponent<Tilemap>();
         this.chunks = new Dictionary<(Vector2Int, Vector2Int), Chunk>();
         this.noise = CreateNoise();
+        DrawChunks();
     }
 
     void Update()
     {
-        timer += Time.deltaTime;
-
-        if (timer > renderDelay)
-        {
-            timer = 0f;
-            DrawChunks();
-        }
+        DrawChunks();
     }
 
     FastNoiseLite CreateNoise()
