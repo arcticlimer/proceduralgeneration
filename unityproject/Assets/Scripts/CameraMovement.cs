@@ -7,7 +7,7 @@ public class CameraMovement : MonoBehaviour
     Camera myCamera;
 
     [SerializeField] float scrollSpeed;
-    public float renderDistance {get; set;} = 2;
+    public float renderDistance { get; set; } = 2;
     public float moveSpeed { get; set; } = 5;
 
     void Start()
@@ -27,32 +27,26 @@ public class CameraMovement : MonoBehaviour
     void DrawChunks()
     {
         var pos = new Vector2(myTransform.position.x, myTransform.position.y);
-        int tileSize = (int)this.mapManager.tileSize;
-        int offset = (int)this.renderDistance * tileSize;
+        int chunkSize = (int)this.mapManager.tileSize;
+        int offset = (int)this.renderDistance * chunkSize;
 
         // TODO: Destroy unrendered chunks
-        for (float y = pos.y - offset; y < pos.y + offset; y += tileSize)
+        for (float y = pos.y - offset; y < pos.y + offset; y += chunkSize)
         {
-            for (float x = pos.x - offset; x < pos.x + offset; x += tileSize)
+            for (float x = pos.x - offset; x < pos.x + offset; x += chunkSize)
             {
                 Vector2 vec = new Vector2(x, y);
-                var (start, end) = PositionToQuadrant(vec, tileSize);
-                this.mapManager.CreateChunk(start, end);
+                Vector2Int vertex = PositionToQuadrant(vec, chunkSize);
+                this.mapManager.CreateChunk(vertex, chunkSize);
             }
         }
     }
 
-    (Vector2Int, Vector2Int) PositionToQuadrant(Vector2 target, int tileSize)
+    Vector2Int PositionToQuadrant(Vector2 target, int tileSize)
     {
         int sx = Mathf.FloorToInt(target.x / tileSize) * tileSize;
         int sy = Mathf.FloorToInt(target.y / tileSize) * tileSize;
-        Vector2Int start = new Vector2Int(sx, sy);
-
-        int ex = Mathf.CeilToInt(target.x / tileSize) * tileSize;
-        int ey = Mathf.CeilToInt(target.y / tileSize) * tileSize;
-        Vector2Int end = new Vector2Int(ex, ey);
-
-        return (start, end);
+        return new Vector2Int(sx, sy);
     }
 
     void DeleteChunks()

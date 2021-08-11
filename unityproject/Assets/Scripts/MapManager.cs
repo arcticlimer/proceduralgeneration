@@ -5,10 +5,10 @@ using UnityEngine.Tilemaps;
 public class MapManager : MonoBehaviour
 {
     Tilemap map;
-    Dictionary<(Vector2Int, Vector2Int), Chunk> chunks;
+    Dictionary<Vector2Int, Chunk> chunks;
     FastNoiseLite noise;
 
-    public Dictionary<(Vector2Int, Vector2Int), Chunk> Chunks => chunks;
+    public Dictionary<Vector2Int, Chunk> Chunks => chunks;
     public float tileSize { get; set; } = 25;
 
     [SerializeField] Tile water;
@@ -19,7 +19,7 @@ public class MapManager : MonoBehaviour
     void Start()
     {
         this.map = gameObject.GetComponent<Tilemap>();
-        this.chunks = new Dictionary<(Vector2Int, Vector2Int), Chunk>();
+        this.chunks = new Dictionary<Vector2Int, Chunk>();
         this.noise = CreateNoise();
         DrawChunks();
     }
@@ -45,17 +45,17 @@ public class MapManager : MonoBehaviour
         }
     }
 
-    public void CreateChunk(Vector2Int start, Vector2Int end)
+    public void CreateChunk(Vector2Int vertex, int chunkSize)
     {
-        if (this.chunks.ContainsKey((start, end)))
+        if (this.chunks.ContainsKey(vertex))
         {
             return;
         }
 
         var tiles = new Dictionary<Vector3Int, GameTile>();
 
-        for (int i = start.x; i < end.x; i++)
-            for (int j = start.y; j < end.y; j++)
+        for (int i = vertex.x; i < vertex.x + chunkSize; i++)
+            for (int j = vertex.y; j < vertex.y + chunkSize; j++)
             {
                 float perlin = this.noise.GetNoise(i, j);
                 Tile tile;
@@ -81,8 +81,8 @@ public class MapManager : MonoBehaviour
                 tiles[pos] = new GameTile(tile, pos);
             }
 
-        Chunk chunk = new Chunk(start, end, tiles, false);
-        this.chunks.Add((start, end), chunk);
+        Chunk chunk = new Chunk(vertex, tiles, false);
+        this.chunks.Add(vertex, chunk);
     }
 
     public void DrawChunk(Chunk chunk)
@@ -101,7 +101,7 @@ public class MapManager : MonoBehaviour
             DeleteTile(tile);
         }
 
-        this.chunks.Remove((chunk.start, chunk.end));
+        this.chunks.Remove(chunk.vertex);
     }
 
     void DeleteTile(GameTile tile)
@@ -112,14 +112,11 @@ public class MapManager : MonoBehaviour
 
 public class Chunk
 {
-    /* public BoundsInt bounds; */
-    public Vector2Int start;
-    public Vector2Int end;
+    public Vector2Int vertex;
     public Dictionary<Vector3Int, GameTile> tiles;
     public bool drawed;
 
-    public Chunk(Vector2Int start, Vector2Int end,
-                 Dictionary<Vector3Int, GameTile> tiles, bool drawed)
+    public Chunk(Vector2Int vertex, Dictionary<Vector3Int, GameTile> tiles, bool drawed)
     {
         this.tiles = tiles;
         this.drawed = drawed;
