@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 using UnityEngine.Tilemaps;
 
 public class MapManager : MonoBehaviour
@@ -7,9 +8,10 @@ public class MapManager : MonoBehaviour
     Tilemap map;
     Dictionary<Vector2Int, Chunk> chunks;
     FastNoiseLite noise;
+    string seed = "defaultseed!";
 
     public Dictionary<Vector2Int, Chunk> Chunks => chunks;
-    public float tileSize { get; set; } = 25;
+    public float chunkSize { get; set; } = 25;
 
     [SerializeField] Tile water;
     [SerializeField] Tile lightGrass;
@@ -24,14 +26,29 @@ public class MapManager : MonoBehaviour
         DrawChunks();
     }
 
+    public void SetSeed(string seed) {
+      this.seed = seed;
+      this.noise = CreateNoise();
+      ClearChunks();
+    }
+
     void Update()
     {
         DrawChunks();
     }
 
+    void ClearChunks() {
+      List<Chunk> chunks = this.chunks.Values.ToList();
+      for (int i = 0; i < this.chunks.Values.Count; i++) {
+        DeleteChunk(chunks[i]);
+      }
+      this.chunks.Clear();
+    }
+
     FastNoiseLite CreateNoise()
     {
-        var noise = new FastNoiseLite();
+        int seed = this.seed.GetHashCode();
+        FastNoiseLite noise = new FastNoiseLite(seed);
         noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
         return noise;
     }

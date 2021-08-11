@@ -5,6 +5,7 @@ public class CameraMovement : MonoBehaviour
     MapManager mapManager;
     Transform myTransform;
     Camera myCamera;
+    Canvas myCanvas;
 
     [SerializeField] float scrollSpeed;
     public float renderDistance { get; set; } = 2;
@@ -15,6 +16,7 @@ public class CameraMovement : MonoBehaviour
         this.myCamera = gameObject.GetComponent<Camera>();
         this.myTransform = gameObject.GetComponent<Transform>();
         this.mapManager = GameObject.Find("World Tilemap").GetComponent<MapManager>();
+        this.myCanvas = GameObject.Find("Canvas").GetComponent<Canvas>();
     }
 
     void Update()
@@ -27,7 +29,7 @@ public class CameraMovement : MonoBehaviour
     void DrawChunks()
     {
         var pos = new Vector2(myTransform.position.x, myTransform.position.y);
-        int chunkSize = (int)this.mapManager.tileSize;
+        int chunkSize = (int)this.mapManager.chunkSize;
         int offset = (int)this.renderDistance * chunkSize;
 
         // TODO: Destroy unrendered chunks
@@ -42,10 +44,10 @@ public class CameraMovement : MonoBehaviour
         }
     }
 
-    Vector2Int PositionToQuadrant(Vector2 target, int tileSize)
+    Vector2Int PositionToQuadrant(Vector2 target, int chunkSize)
     {
-        int sx = Mathf.FloorToInt(target.x / tileSize) * tileSize;
-        int sy = Mathf.FloorToInt(target.y / tileSize) * tileSize;
+        int sx = Mathf.FloorToInt(target.x / chunkSize) * chunkSize;
+        int sy = Mathf.FloorToInt(target.y / chunkSize) * chunkSize;
         return new Vector2Int(sx, sy);
     }
 
@@ -61,6 +63,7 @@ public class CameraMovement : MonoBehaviour
         bool holdingShift = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
         float speedBonus = holdingShift ? moveSpeed * 2 : moveSpeed;
 
+        // Movement
         if (Input.GetKey(KeyCode.A))
             myTransform.position += Vector3.left * speedBonus * Time.deltaTime;
         if (Input.GetKey(KeyCode.D))
@@ -69,6 +72,10 @@ public class CameraMovement : MonoBehaviour
             myTransform.position += Vector3.up * speedBonus * Time.deltaTime;
         if (Input.GetKey(KeyCode.S))
             myTransform.position += Vector3.down * speedBonus * Time.deltaTime;
+
+        // Toggle UI
+        if (Input.GetKeyDown(KeyCode.G))
+            myCanvas.enabled = !myCanvas.enabled;
 
         float newZoom = myCamera.orthographicSize - Input.GetAxis("Mouse ScrollWheel") * scrollSpeed;
 
