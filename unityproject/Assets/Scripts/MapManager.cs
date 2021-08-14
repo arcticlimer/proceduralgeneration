@@ -5,31 +5,33 @@ using UnityEngine.Tilemaps;
 
 public class MapManager : MonoBehaviour
 {
-    Tilemap map;
-    Dictionary<Vector2Int, Chunk> chunks;
-    FastNoiseLite noise;
-    string seed = "defaultseed!";
+    Tilemap Map;
+    FastNoiseLite Noise;
+    string Seed = "defaultseed!";
 
-    public Dictionary<Vector2Int, Chunk> Chunks => chunks;
-    public float chunkSize { get; set; } = 25;
+    public float ChunkSize { get; set; } = 25;
+    public Dictionary<Vector2Int, Chunk> Chunks { get; set; }
 
-    [SerializeField] Tile water;
-    [SerializeField] Tile lightGrass;
-    [SerializeField] Tile grass;
-    [SerializeField] Tile sand;
+    [SerializeField] Tile Water;
+    [SerializeField] Tile LightGrass;
+    [SerializeField] Tile Grass;
+    [SerializeField] Tile Sand;
+    [SerializeField] Tile StoneFloor;
+    [SerializeField] Tile StoneWall;
 
     void Start()
     {
-        this.map = gameObject.GetComponent<Tilemap>();
-        this.chunks = new Dictionary<Vector2Int, Chunk>();
-        this.noise = CreateNoise();
+        this.Map = gameObject.GetComponent<Tilemap>();
+        this.Chunks = new Dictionary<Vector2Int, Chunk>();
+        this.Noise = CreateNoise();
         DrawChunks();
     }
 
-    public void SetSeed(string seed) {
-      this.seed = seed;
-      this.noise = CreateNoise();
-      ClearChunks();
+    public void SetSeed(string seed)
+    {
+        this.Seed = seed;
+        this.Noise = CreateNoise();
+        ClearChunks();
     }
 
     void Update()
@@ -37,17 +39,19 @@ public class MapManager : MonoBehaviour
         DrawChunks();
     }
 
-    void ClearChunks() {
-      List<Chunk> chunks = this.chunks.Values.ToList();
-      for (int i = 0; i < this.chunks.Values.Count; i++) {
-        DeleteChunk(chunks[i]);
-      }
-      this.chunks.Clear();
+    public void ClearChunks()
+    {
+        List<Chunk> chunks = this.Chunks.Values.ToList();
+        for (int i = 0; i < this.Chunks.Values.Count; i++)
+        {
+            DeleteChunk(chunks[i]);
+        }
+        this.Chunks.Clear();
     }
 
     FastNoiseLite CreateNoise()
     {
-        int seed = this.seed.GetHashCode();
+        int seed = this.Seed.GetHashCode();
         FastNoiseLite noise = new FastNoiseLite(seed);
         noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
         return noise;
@@ -55,58 +59,148 @@ public class MapManager : MonoBehaviour
 
     void DrawChunks()
     {
-        foreach (Chunk chunk in this.chunks.Values)
+        foreach (Chunk chunk in this.Chunks.Values)
         {
             if (!chunk.drawed)
+            {
                 DrawChunk(chunk);
+            }
         }
     }
 
-    public void CreateChunk(Vector2Int vertex, int chunkSize)
+    int CountNeighbours(Vector2Int pos, Dictionary<Vector2Int, GameTile> tiles)
     {
-        if (this.chunks.ContainsKey(vertex))
+        int count = 0;
+
+        for (int y = pos.y - 1; y <= pos.y + 1; y++)
+        {
+            for (int x = pos.x - 1; x <= pos.x + 1; x++)
+            {
+                var vec = new Vector2Int(x, y);
+
+                if (vec == pos)
+                {
+                    continue;
+                };
+
+                if (tiles[vec].tile == StoneWall)
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    public void CreateChunk(Vector2Int vertex,
+            ChunkEnvironments type,
+            int chunkSize)
+    {
+        if (this.Chunks.ContainsKey(vertex))
         {
             return;
         }
 
-        var tiles = new Dictionary<Vector3Int, GameTile>();
+        var tiles = new Dictionary<Vector2Int, GameTile>();
 
-        for (int i = vertex.x; i < vertex.x + chunkSize; i++)
-            for (int j = vertex.y; j < vertex.y + chunkSize; j++)
-            {
-                float perlin = this.noise.GetNoise(i, j);
-                Tile tile;
-
-                if (perlin > 0.6)
+        switch (type)
+        {
+            // TODO: Separate this into functions
+            case ChunkEnvironments.Caves:
+                // Cellular automata chunking
+                for (int y = vertex.y; y < vertex.y + chunkSize; y++)
                 {
-                    tile = grass;
-                }
-                else if (perlin > 0.2)
-                {
-                    tile = lightGrass;
-                }
-                else if (perlin > -0.5)
-                {
-                    tile = sand;
-                }
-                else
-                {
-                    tile = water;
+                    for (int x = vertex.x; x < vertex.x + chunkSize; x++)
+                    {
+                        var vec = new Vector2Int(x, y);
+                        int value = Random.Range(0, 2);
+                        tiles[vec] = new GameTile(value == 0 ? StoneFloor : StoneWall, vec);
+                    }
                 }
 
-                Vector3Int pos = new Vector3Int(i, j, 0);
-                tiles[pos] = new GameTile(tile, pos);
-            }
+                int iterations = 1;
+                for (int i = 0; i < iterations; i++)
+                {
+                    for (int y = vertex.y + 1; y < vertex.y + chunkSize - 1; y++)
+                    {
+                        for (int x = vertex.x + 1; x < vertex.x + chunkSize - 1; x++)
+                        {
+                            var vec = new Vector2Int(x, y);
+                            GameTile tile = tiles[vec];
+                            int neighbours = CountNeighbours(tile.pos, tiles);
+
+                            if (tile.tile == StoneWall)
+                            {
+                                if (neighbours >= 4)
+                                {
+                                    tile.tile = StoneWall;
+                                }
+                                else
+                                {
+                                    tile.tile = StoneFloor;
+                                }
+                            }
+                            else
+                            {
+                                if (neighbours >= 5)
+                                {
+                                    tile.tile = StoneWall;
+                                }
+                                else
+                                {
+                                    tile.tile = StoneFloor;
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            case ChunkEnvironments.Terrain:
+                // Noise chunking
+                for (int i = vertex.x; i < vertex.x + chunkSize; i++)
+                {
+                    for (int j = vertex.y; j < vertex.y + chunkSize; j++)
+                    {
+                        float perlin = this.Noise.GetNoise(i, j);
+                        Tile tile;
+
+                        if (perlin > 0.6)
+                        {
+                            tile = Grass;
+                        }
+                        else if (perlin > 0.2)
+                        {
+                            tile = LightGrass;
+                        }
+                        else if (perlin > -0.5)
+                        {
+                            tile = Sand;
+                        }
+                        else
+                        {
+                            tile = Water;
+                        }
+
+                        Vector2Int pos = new Vector2Int(i, j);
+                        tiles[pos] = new GameTile(tile, pos);
+                    }
+                }
+                break;
+            case ChunkEnvironments.Dungeon:
+                break;
+        }
 
         Chunk chunk = new Chunk(vertex, tiles, false);
-        this.chunks.Add(vertex, chunk);
+        this.Chunks.Add(vertex, chunk);
     }
 
     public void DrawChunk(Chunk chunk)
     {
         foreach (GameTile tile in chunk.tiles.Values)
         {
-            this.map.SetTile(tile.pos, tile.tile);
+            var vector = new Vector3Int(tile.pos.x, tile.pos.y, 0);
+            this.Map.SetTile(vector, tile.tile);
         }
         chunk.drawed = true;
     }
@@ -118,23 +212,32 @@ public class MapManager : MonoBehaviour
             DeleteTile(tile);
         }
 
-        this.chunks.Remove(chunk.vertex);
+        this.Chunks.Remove(chunk.vertex);
     }
 
     void DeleteTile(GameTile tile)
     {
-        this.map.SetTile(tile.pos, null);
+        Vector3Int vector = new Vector3Int(tile.pos.x, tile.pos.y, 0);
+        this.Map.SetTile(vector, null);
     }
+}
+
+public enum ChunkEnvironments
+{
+    Caves,
+    Terrain,
+    Dungeon
 }
 
 public class Chunk
 {
+    public Dictionary<Vector2Int, GameTile> tiles;
     public Vector2Int vertex;
-    public Dictionary<Vector3Int, GameTile> tiles;
     public bool drawed;
 
-    public Chunk(Vector2Int vertex, Dictionary<Vector3Int, GameTile> tiles, bool drawed)
+    public Chunk(Vector2Int vertex, Dictionary<Vector2Int, GameTile> tiles, bool drawed)
     {
+        this.vertex = vertex;
         this.tiles = tiles;
         this.drawed = drawed;
     }
@@ -143,9 +246,9 @@ public class Chunk
 public class GameTile
 {
     public Tile tile;
-    public Vector3Int pos;
+    public Vector2Int pos;
 
-    public GameTile(Tile tile, Vector3Int pos)
+    public GameTile(Tile tile, Vector2Int pos)
     {
         this.tile = tile;
         this.pos = pos;

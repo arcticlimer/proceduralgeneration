@@ -2,10 +2,12 @@ using UnityEngine;
 
 public class CameraMovement : MonoBehaviour
 {
+    ChunkEnvironments lastEnvironment = ChunkEnvironments.Terrain;
     MapManager mapManager;
     Transform myTransform;
     Camera myCamera;
     Canvas myCanvas;
+    int mode = 1;
 
     [SerializeField] float scrollSpeed;
     public float renderDistance { get; set; } = 2;
@@ -29,8 +31,30 @@ public class CameraMovement : MonoBehaviour
     void DrawChunks()
     {
         var pos = new Vector2(myTransform.position.x, myTransform.position.y);
-        int chunkSize = (int)this.mapManager.chunkSize;
+        int chunkSize = (int)this.mapManager.ChunkSize;
         int offset = (int)this.renderDistance * chunkSize;
+        ChunkEnvironments environment;
+
+        if (this.mode == 1)
+        {
+            environment = ChunkEnvironments.Terrain;
+        }
+        else if (this.mode == 0)
+        {
+            environment = ChunkEnvironments.Caves;
+        }
+        else if (this.mode == -1)
+        {
+            environment = ChunkEnvironments.Dungeon;
+        }
+        else
+        {
+            environment = ChunkEnvironments.Terrain;
+        }
+
+        if (environment != lastEnvironment) {
+          this.mapManager.ClearChunks();
+        }
 
         // TODO: Destroy unrendered chunks
         for (float y = pos.y - offset; y < pos.y + offset; y += chunkSize)
@@ -39,9 +63,11 @@ public class CameraMovement : MonoBehaviour
             {
                 Vector2 vec = new Vector2(x, y);
                 Vector2Int vertex = PositionToQuadrant(vec, chunkSize);
-                this.mapManager.CreateChunk(vertex, chunkSize);
+                this.mapManager.CreateChunk(vertex, environment, chunkSize);
             }
         }
+
+        this.lastEnvironment = environment;
     }
 
     Vector2Int PositionToQuadrant(Vector2 target, int chunkSize)
@@ -65,20 +91,44 @@ public class CameraMovement : MonoBehaviour
 
         // Movement
         if (Input.GetKey(KeyCode.A))
+        {
             myTransform.position += Vector3.left * speedBonus * Time.deltaTime;
+        }
         if (Input.GetKey(KeyCode.D))
+        {
             myTransform.position += Vector3.right * speedBonus * Time.deltaTime;
+        }
         if (Input.GetKey(KeyCode.W))
+        {
             myTransform.position += Vector3.up * speedBonus * Time.deltaTime;
+        }
         if (Input.GetKey(KeyCode.S))
+        {
             myTransform.position += Vector3.down * speedBonus * Time.deltaTime;
+        }
 
         // Toggle UI
         if (Input.GetKeyDown(KeyCode.G))
+        {
             myCanvas.enabled = !myCanvas.enabled;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Less))
+        {
+            if (this.mode > -1)
+            {
+                this.mode--;
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.Greater))
+        {
+            if (this.mode < 1)
+            {
+                this.mode++;
+            }
+        }
 
         float newZoom = myCamera.orthographicSize - Input.GetAxis("Mouse ScrollWheel") * scrollSpeed;
-
         myCamera.orthographicSize = Mathf.Clamp(newZoom, 3f, 75f);
     }
 }
