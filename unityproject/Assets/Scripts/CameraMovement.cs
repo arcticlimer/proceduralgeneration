@@ -113,14 +113,14 @@ public class CameraMovement : MonoBehaviour
             myCanvas.enabled = !myCanvas.enabled;
         }
 
-        if (Input.GetKeyDown(KeyCode.Less))
+        if (Input.GetKeyDown(KeyCode.O))
         {
             if (this.mode > -1)
             {
                 this.mode--;
             }
         }
-        if (Input.GetKeyDown(KeyCode.Greater))
+        if (Input.GetKeyDown(KeyCode.P))
         {
             if (this.mode < 1)
             {
