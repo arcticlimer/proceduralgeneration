@@ -53,7 +53,11 @@ public class MapManager : MonoBehaviour
     {
         int seed = this.Seed.GetHashCode();
         FastNoiseLite noise = new FastNoiseLite(seed);
-        noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        /* noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2); */
+        noise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);
+        noise.SetFrequency(0.07f);
+        noise.SetFractalOctaves(6);
+
         return noise;
     }
 
@@ -93,9 +97,96 @@ public class MapManager : MonoBehaviour
         return count;
     }
 
+    void CellularAutomata(Dictionary<Vector2Int, GameTile> tiles, Vector2Int vertex, int chunkSize)
+    {
+        for (int y = vertex.y; y < vertex.y + chunkSize; y++)
+        {
+            for (int x = vertex.x; x < vertex.x + chunkSize; x++)
+            {
+                var vec = new Vector2Int(x, y);
+                int value = Random.Range(0, 2);
+                tiles[vec] = new GameTile(value == 0 ? StoneFloor : StoneWall, vec);
+            }
+        }
+
+        int iterations = 1;
+        for (int i = 0; i < iterations; i++)
+        {
+            for (int y = vertex.y + 1; y < vertex.y + chunkSize - 1; y++)
+            {
+                for (int x = vertex.x + 1; x < vertex.x + chunkSize - 1; x++)
+                {
+                    var vec = new Vector2Int(x, y);
+                    GameTile tile = tiles[vec];
+                    int neighbours = CountNeighbours(tile.pos, tiles);
+
+                    if (tile.tile == StoneWall)
+                    {
+                        if (neighbours >= 4)
+                        {
+                            tile.tile = StoneWall;
+                        }
+                        else
+                        {
+                            tile.tile = StoneFloor;
+                        }
+                    }
+                    else
+                    {
+                        if (neighbours >= 5)
+                        {
+                            tile.tile = StoneWall;
+                        }
+                        else
+                        {
+                            tile.tile = StoneFloor;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void TerrainWithPerlinNoise(Dictionary<Vector2Int, GameTile> tiles, Vector2Int vertex, int chunkSize)
+    {
+        for (int i = vertex.x; i < vertex.x + chunkSize; i++)
+        {
+            for (int j = vertex.y; j < vertex.y + chunkSize; j++)
+            {
+                float perlin = this.Noise.GetNoise(i, j);
+                Tile tile;
+
+                if (perlin > 0.4)
+                {
+                    tile = Grass;
+                }
+                else if (perlin > 0)
+                {
+                    tile = LightGrass;
+                }
+                else if (perlin > -0.3)
+                {
+                    tile = Sand;
+                }
+                else
+                {
+                    tile = Water;
+                }
+
+                Vector2Int pos = new Vector2Int(i, j);
+                tiles[pos] = new GameTile(tile, pos);
+            }
+        }
+    }
+
+    void BSPDungeon(Dictionary<Vector2Int, GameTile> tiles, Vector2Int vertex, int chunkSize)
+    {
+
+    }
+
     public void CreateChunk(Vector2Int vertex,
-            ChunkEnvironments type,
-            int chunkSize)
+                            ChunkEnvironments type,
+                            int chunkSize)
     {
         if (this.Chunks.ContainsKey(vertex))
         {
@@ -106,88 +197,14 @@ public class MapManager : MonoBehaviour
 
         switch (type)
         {
-            // TODO: Separate this into functions
             case ChunkEnvironments.Caves:
-                // Cellular automata chunking
-                for (int y = vertex.y; y < vertex.y + chunkSize; y++)
-                {
-                    for (int x = vertex.x; x < vertex.x + chunkSize; x++)
-                    {
-                        var vec = new Vector2Int(x, y);
-                        int value = Random.Range(0, 2);
-                        tiles[vec] = new GameTile(value == 0 ? StoneFloor : StoneWall, vec);
-                    }
-                }
-
-                int iterations = 1;
-                for (int i = 0; i < iterations; i++)
-                {
-                    for (int y = vertex.y + 1; y < vertex.y + chunkSize - 1; y++)
-                    {
-                        for (int x = vertex.x + 1; x < vertex.x + chunkSize - 1; x++)
-                        {
-                            var vec = new Vector2Int(x, y);
-                            GameTile tile = tiles[vec];
-                            int neighbours = CountNeighbours(tile.pos, tiles);
-
-                            if (tile.tile == StoneWall)
-                            {
-                                if (neighbours >= 4)
-                                {
-                                    tile.tile = StoneWall;
-                                }
-                                else
-                                {
-                                    tile.tile = StoneFloor;
-                                }
-                            }
-                            else
-                            {
-                                if (neighbours >= 5)
-                                {
-                                    tile.tile = StoneWall;
-                                }
-                                else
-                                {
-                                    tile.tile = StoneFloor;
-                                }
-                            }
-                        }
-                    }
-                }
+                CellularAutomata(tiles, vertex, chunkSize);
                 break;
             case ChunkEnvironments.Terrain:
-                // Noise chunking
-                for (int i = vertex.x; i < vertex.x + chunkSize; i++)
-                {
-                    for (int j = vertex.y; j < vertex.y + chunkSize; j++)
-                    {
-                        float perlin = this.Noise.GetNoise(i, j);
-                        Tile tile;
-
-                        if (perlin > 0.6)
-                        {
-                            tile = Grass;
-                        }
-                        else if (perlin > 0.2)
-                        {
-                            tile = LightGrass;
-                        }
-                        else if (perlin > -0.5)
-                        {
-                            tile = Sand;
-                        }
-                        else
-                        {
-                            tile = Water;
-                        }
-
-                        Vector2Int pos = new Vector2Int(i, j);
-                        tiles[pos] = new GameTile(tile, pos);
-                    }
-                }
+                TerrainWithPerlinNoise(tiles, vertex, chunkSize);
                 break;
             case ChunkEnvironments.Dungeon:
+                TerrainWithPerlinNoise(tiles, vertex, chunkSize);
                 break;
         }
 
